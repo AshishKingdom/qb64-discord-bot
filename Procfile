@@ -1,0 +1,1 @@
+worker: python qb64_bot.py
