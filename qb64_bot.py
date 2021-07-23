@@ -1,3 +1,5 @@
+# @Author: AshishKingodm (Ashish Kushwaha)
+
 import os
 from dotenv import load_dotenv
 import discord
@@ -59,11 +61,11 @@ async def on_message(message):
         else:
             #lets extract code from message
             if(vb_mentioned):
-                p = message.content[5:].find("```vb")+5
+                p = message.content.find("```vb")+5
             else:
-                p = message.content[5:].find("```")+3
+                p = message.content.find("```")+3
 
-            code_data = message.content[p,message.content.find("```", p)]
+            code_data = message.content[p:message.content.find("```", p)]
 
         if(code_data.find("'$debug-bot-cloud")!=-1) : debug = True
 
