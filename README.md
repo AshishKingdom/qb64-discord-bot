@@ -19,6 +19,8 @@ OR <br>
 \`\`\`vb <br>
 'your code <br>
 \`\`\` <br>
+OR <br>
+%qb64 your_code<br>
 
 - To get full documentation for a keyword, use the following syntax :-
 `%help keyword_name`
