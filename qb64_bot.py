@@ -80,7 +80,7 @@ async def on_message(message):
             f_hnd = open("/tmp/source.txt", 'w')
             f_hnd.write(code_data)
             f_hnd.close()
-            if(debug):response+="[QB64-BOT: code saved in 'tmp/source.txt' successfully.]\n"
+            if(debug):response+="[QB64_BOT: code saved in 'tmp/source.txt' successfully.]\n"
         except OSError:
             response+="[QB64_BOT: Failed to write code in '/tmp/source.txt']\n"
             await message.add_reaction("❗")
@@ -103,9 +103,13 @@ async def on_message(message):
             f_hnd = open("/tmp/out.txt", "r")
             if(execute==5): #returns 5 if the program was stuck in some kind of infinite loop
                 if(debug): response+="[QB64_BOT: Program execution exceeded more than 2 seconds]\n"
-                response+= f_hnd.read(1500) + "\n" #in this case, we will send only 1024bytes of the output
+                program_output = f_hnd.read(1500)
+                if(program_output.strip()=''): program_output = "[QB64_BOT: Program does not produce any output]"
+                response+= program_output + "\n" #in this case, we will send only 1024bytes of the output
             else:
-                response+= f_hnd.read(1500) + "\n"
+                program_output = f_hnd.read(1500)
+                if(program_output.strip()=''): program_output = "[QB64_BOT: Program does not produce any output]"
+                response+= program_output + "\n"
             f_hnd.close()
         except OSError:
             response+="[QB64_BOT: Failed to read '/tmp/out.txt']\n"
