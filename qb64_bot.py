@@ -104,11 +104,11 @@ async def on_message(message):
             if(execute==5): #returns 5 if the program was stuck in some kind of infinite loop
                 if(debug): response+="[QB64_BOT: Program execution exceeded more than 2 seconds]\n"
                 program_output = f_hnd.read(1500)
-                if(program_output.strip()=''): program_output = "[QB64_BOT: Program does not produce any output]"
+                if(program_output.strip()==''): program_output = "[QB64_BOT: Program does not produce any output]"
                 response+= program_output + "\n" #in this case, we will send only 1024bytes of the output
             else:
                 program_output = f_hnd.read(1500)
-                if(program_output.strip()=''): program_output = "[QB64_BOT: Program does not produce any output]"
+                if(program_output.strip()==''): program_output = "[QB64_BOT: Program does not produce any output]"
                 response+= program_output + "\n"
             f_hnd.close()
         except OSError:
