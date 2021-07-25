@@ -22,6 +22,9 @@ f.close()
 @client.event
 async def on_ready():
     print("{} is connected to Discord!".format(client.user))
+    game = discord.Game("%bot-help")
+    await client.change_presence(activity=game)
+    return
 
 @client.event
 async def on_message(message):
