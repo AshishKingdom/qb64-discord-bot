@@ -1,191 +1,154 @@
-# @Author: AshishKingodm (Ashish Kushwaha)
+# @Author: AshishKingdom(Ashish Kushwaha)
 
-import os
-from dotenv import load_dotenv
-import discord
-import qb64_help_parser
+#help files parser related functions
+import requests
 
-#initialization 
-
-load_dotenv()
-
-client = discord.Client()
-TOKEN = os.getenv('DISCORD_BOT_TOKEN')
-
-
-#load all qb64/qbasic keywords
-keywords_known = []
-f = open('keywords.txt', 'r')
-keywords_known = f.read().split('\n')
-f.close()
-
-@client.event
-async def on_ready():
-    print("{} is connected to Discord!".format(client.user))
-    game = discord.Game("%bot-help")
-    await client.change_presence(activity=game)
-    return
-
-@client.event
-async def on_message(message):
-    if message.author == client.user:
-        return
-
-    # %qb64 command
-    if(message.content[:5]=="%qb64"):
-        response = ""
-        execute = 0
-        debug = False
-
-        code_data = ""
-        vb_mentioned = False
-        # lets first look for ```vb in message (if user has used codeblocks)
-        code_block_pos = message.content.find("```vb")
-        if(code_block_pos == -1):
-            # ```vb not found.. so maybe user might have used simply ```
-            code_block_pos = message.content.find("```")
-        else:
-            # since vb was mentioned in ```vb, vb_mentioned will be set to true
-            vb_mentioned = True
-
-        if(code_block_pos == -1):
-            # ah.. so ``` is also not present in a message.
-            # now there are 2 possibilities, either user have just sent %qb64 which is wrong
-            # or user have sent the code without using codeblocks.
-            if(message.content[5:].strip()==''):
-                # only %qb64 was used by the user.
-                await message.add_reaction("❌")
-                await message.channel.send("> {} : No code found. Use %bot-help".format(message.author.mention))
-                return
-            else:
-                # the user has not used code-blocks. Maybe, the user was being lazy (:P)
-                # we will treat all the content after "%qb64 " as a code.
-                code_data = message.content[5:]
-        else:
-            #lets extract code from message
-            if(vb_mentioned):
-                p = message.content.find("```vb")+5
-            else:
-                p = message.content.find("```")+3
-
-            code_data = message.content[p:message.content.find("```", p)]
-
-        if(code_data.find("'$debug-bot-cloud")!=-1) : debug = True
-
-        if(debug) : response += "[QB64_BOT_DEBUG_MODE]\n"
-
-        await message.add_reaction("⏳")
-
-        if(debug):response+="[QB64_BOT: attemtping to save the code in '/tmp/source.txt']\n"
-
-        # saving the code data in '/tmp/source.txt'
-        try:
-            f_hnd = open("/tmp/source.txt", 'w')
-            f_hnd.write(code_data)
-            f_hnd.close()
-            if(debug):response+="[QB64_BOT: code saved in 'tmp/source.txt' successfully.]\n"
-        except OSError:
-            response+="[QB64_BOT: Failed to write code in '/tmp/source.txt']\n"
-            await message.add_reaction("❗")
-            await message.clear_reaction("⏳")
-            await message.reply("```\n{}\n```".format(response))
-            return
-
-        #saving output of the program in out.txt using Luke's L-Basid
-
-        if(debug):response+="[QB64_BOT: running './bin/lbasic -t /tmp/source.txt>/tmp/out.txt']\n"
-
-        execute = os.system("./bin/lbasic -t /tmp/source.txt>/tmp/out.txt")
-
-        if(execute==1):
-            if(debug):response+="[QB64_BOT: Some error occured. lbasic ended with 1.]\n"
-
-        if(debug): response+="[QB64_BOT: attemtping to read '/tmp/out.txt']\n"
-
-        try:
-            f_hnd = open("/tmp/out.txt", "r")
-            if(execute==5): #returns 5 if the program was stuck in some kind of infinite loop
-                if(debug): response+="[QB64_BOT: Program execution exceeded more than 2 seconds]\n"
-                program_output = f_hnd.read(1500)
-                if(program_output.strip()==''): program_output = "[QB64_BOT: Program does not produce any output]"
-                response+= program_output + "\n" #in this case, we will send only 1024bytes of the output
-            else:
-                program_output = f_hnd.read(1500)
-                if(program_output.strip()==''): program_output = "[QB64_BOT: Program does not produce any output]"
-                response+= program_output + "\n"
-            f_hnd.close()
-        except OSError:
-            response+="[QB64_BOT: Failed to read '/tmp/out.txt']\n"
-            await message.add_reaction("❗")
-            await message.clear_reaction("⏳")
-            await message.reply("```\n{}\n```".format(response))
-            return
-        #time_taken = time.time()-start
-        await message.add_reaction("✅")
-        await message.clear_reaction("⏳")
-        response = ">>> **Output :-**\n```\n"+response+"\n```"
-        await message.channel.send(response)
-        return
+def getRawDataFromQB64Wiki(keyword):
+    #return the raw wiki data from http://qb64.org/wiki if it succeed
+    #otherwise, we will be using data from the stored help files
+    r = requests.get("http://qb64.org/wiki/index.php?action=edit&title="+keyword.upper())
+    if(r.status_code==200):
+        data = r.text
+        return data[data.find('name="wpTextbox1">')+18:data.find("</textarea>")]
     else:
-        # %wiki KEYWORD command
-        if(message.content[:6]=="%wiki "):
-            help_word = message.content[5:].strip().upper()
-            response = ""
-            if(help_word in keywords_known):
-                await message.add_reaction("✅")
-                response = ">>> {} : http://qb64.org/wiki/".format(message.author.mention)+help_word
+        f = open('help/'+keyword.upper()+'.txt', 'r')
+        data = f.read()
+        f.close()
+        return data
+
+
+def removeHTMLSpecialChars(s):
+    d = {"&amp;":'&', "&lt;":'<', "&gt;":'>', "&nbsp;":' '}
+    s2 = s
+    for k in d.keys():
+        s2 = s2.replace(k, d[k])
+    return s2
+
+def reformatStr(s, put_backtick=False): #coverts {{ABC|XYZ}} or [[ABC|XYZ]] to XYZ
+    s2 = ""
+    i = 0
+    while(i<len(s)):
+        c = s[i]
+        if(s[i:i+2]=="{{" or s[i:i+2]=="[["):
+            f1 = s.find('|', i+2)
+            f2 = s.find('|', f1+1)
+
+            if s[i:i+2]=="{{":
+                end_sep = "}}"
             else:
-                await message.add_reaction("❌")
-                response = ">>> {} : keyword not found. Try again. 🤷‍\n Use %bot-help to know about commands".format(message.author.mention)
-            await message.channel.send(response)
-            return
-        # %help KEYWORD command
-        if(message.content[:6]=="%help "):
-            doc_word = message.content[5:].strip().upper()
-            response = ""
-            if(doc_word in keywords_known):
-                await message.add_reaction("✅")
-                doc = qb64_help_parser.getDocumentation(doc_word)
-                if(doc["bytes"]>1800):
-                    response = "**{}** description exceed 2000 chars. 🤷‍ \n Use wiki - http://qb64.org/wiki/{}".format(doc_word, doc_word)
+                end_sep = "]]"
+            end_pos = s.find(end_sep, i+2)
+
+            if(f1>0):
+                if(f2>f1):
+                    if(f2<end_pos): 
+                        f = f2
+                    else:
+                        if(f1>end_pos):
+                            f = -1
+                        else:
+                            f = f1
                 else:
-                    response = ">>> **{}** \n {}\n\n".format(doc["title"], doc["use"])
-                    response += "**Syntax :-**\n{}\n\n".format(doc["{{PageSyntax}}"])
-                    if(doc["{{PageParameters}}"]!=''): response += "**Parameters :-**\n {}\n\n".format(doc["{{PageParameters}}"])
-                    if(doc["{{PageDescription}}"]!=''): response += "**Description :-**\n {}\n\n".format(doc["{{PageDescription}}"])
-                    if(doc["{{PageAvailability}}"]!=''): response += "**Availability :-**\n {}\n".format(doc["{{PageAvailability}}"])
+                    if(f1>end_pos):
+                        f = -1
+                    else:
+                        f = f1
             else:
-                await message.add_reaction("❌")
-                response = ">>> {} keyword not found. Try again. 🤷‍ \nUse %bot-help to know about commands".format(message.author.mention)
-            
-            await message.channel.send(response)
-            return
-        # %example command
-        if(message.content[:9]=="%example "):
-            doc_word = message.content[9:].strip().upper()
-            response = ""
-            if(doc_word in keywords_known):
-                await message.add_reaction("✅")
-                response = qb64_help_parser.getExample(doc_word)
-                if(len(response)>1800):
-                    response = ">>> **{}** example code exceed 2000 chars. 🤷‍ \n Use wiki - http://qb64.org/wiki/{}".format(doc_word, doc_word)
-            else:
-                await message.add_reaction("❌")
-                response = ">>> {} : keyword not found. Try again. :(\n Use %bot-help to know about commands".format(message.author.mention)
-            
-            await message.channel.send(response)
-            return
-        # %bot-help command
-        if(message.content.strip()=="%bot-help"):
-            response = ">>> **QB64 BOT Help -** \n\n"
-            response += "_To run code using Luke's L-BASIC, use the following syntax :-_ \n%qb64\n\`\`\`\n'your code\n\`\`\`\n_OR_"
-            response += "\n%qb64\n\`\`\`vb\n'your code\n\`\`\`\nOR\n%qb64 your_code\n"
-            response += "_To get full documentation for a keyword, use the following syntax :-_\n`%help keyword_name`\n"
-            response += "_To get example for a keyword, use the following syntax :-_\n`%example keyword_name`\n"
-            response += "_To get wiki link for a keyword, use the following syntax :-_\n`%wiki keyword_name`\n"
-            response += "_To get this help message use the following syntax :-_\n`%bot-help`"
-            await message.channel.send(response)
-            return
+                f = -1
 
 
-client.run(os.getenv('DISCORD_BOT_TOKEN'))
+            if(f==-1):
+                c = s[i+2:s.find(end_sep, i+2)]
+                #print(c)
+                i = s.find(end_sep, i+2)+2
+                if(put_backtick): c = '`'+c+'`'
+            else:
+                c = s[f+1:s.find(end_sep, f)]
+                i = s.find(end_sep, f)+2
+                #print(c, s, i)
+                #input()
+        else:
+            i += 1
+        s2 += c
+    return s2
+
+def replaceStr(s, f, r): #replaces every occurance of f with r in s
+    s2 = s.replace(f, r)
+    return s2
+
+
+def getDocumentation(keyword):
+
+    data = {"bytes":0, "title":keyword.upper(), "use":"", "{{PageSyntax}}":"", "{{PageParameters}}":"", "{{PageDescription}}":"", "{{PageAvailability}}":""}
+
+    file_content = getRawDataFromQB64Wiki(keyword).split('\n')
+    topics = ["{{PageSyntax}}", "{{PageParameters}}", "{{PageDescription}}", "{{PageAvailability}}"]
+    current_topic = ""
+    #parse the contents
+    done_use = False
+    i = 0
+    while i<len(file_content):
+
+        if(done_use==False):
+            if(file_content[0][:15]=="{{DISPLAYTITLE:"):
+                j = 1
+            else:
+                j = 0
+            while(file_content[j].strip() not in topics):
+                data["use"] += removeHTMLSpecialChars(file_content[j]).replace("'''",'').replace("''",'')+' '
+                j += 1
+            done_use = True
+            current_topic = file_content[j].strip()
+            i = j+1
+
+        fc = file_content[i].strip()
+
+        if(fc=="{{PageExamples}}" or fc=="{{PageSeeAlso}}"):
+            break
+
+        if(fc in topics):
+            current_topic = fc 
+            i += 1
+            continue
+
+        if(current_topic in ["{{PageParameters}}", "{{PageDescription}}", "{{PageAvailability}}"]):
+            if(fc[:2]=="* "):
+                fc = "\n- "+fc[2:]
+            if(fc[:3]=="** "):
+                fc = "\n- "+fc[3:]
+
+        data[current_topic] += removeHTMLSpecialChars(fc)
+        i += 1
+
+    data["use"] = reformatStr(data["use"], True)
+    
+    data["{{PageSyntax}}"] = '`' + reformatStr(data["{{PageSyntax}}"][1:].replace("'''", "").replace("''", "")) + '`'
+    data["{{PageParameters}}"] = reformatStr(data["{{PageParameters}}"], True).replace("'''", "").replace("''", "")
+    data["{{PageDescription}}"] = reformatStr(data["{{PageDescription}}"], True).replace("'''", "").replace("''", "")
+    
+    data["bytes"] = len(data["title"]) + len(data["use"]) + len(data["{{PageSyntax}}"]) + len(data["{{PageParameters}}"])
+    data["bytes"] += len(data["{{PageDescription}}"]) + len(data["{{PageAvailability}}"])
+    
+    return data
+
+def getExample(keyword):
+    res = ">>> **{}** Example:-\n```vb\n{}\n```\n"
+
+    file_content = getRawDataFromQB64Wiki(keyword)
+
+    found = False
+    #parse the contents
+    pos1 = file_content.find("{{CodeStart}}")
+    pos2 = file_content.find("{{CodeEnd}}")
+    if(pos1!=-1 and pos2!=-1):
+        code = removeHTMLSpecialChars(file_content[pos1+13:pos2])
+        return res.format(keyword.upper(), reformatStr(code).replace("'''", "").replace("''", ""))
+    else:
+        return "No example available for **{}** at Qb64 Wiki.".format(keyword.upper())
+
+#def updatePage(keyword):
+
+
+#print(getExample(input()))
+#print(getDocumentation(input()))
+#print(getDocumentation(input())["description"])
