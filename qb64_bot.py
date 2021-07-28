@@ -146,13 +146,14 @@ async def on_message(message):
             if(doc_word in keywords_known):
                 await message.add_reaction("✅")
                 doc = qb64_help_parser.getDocumentation(doc_word)
-                response = ">>> **{}** \n {}\n\n".format(doc["title"], doc["use"])
-                response += "**Syntax :-**\n{}\n\n".format(doc["syntax"])
-                if(doc["parameters"]!=''): response += "**Parameters :-**\n {}\n\n".format(doc["parameters"])
-                if(doc["description"]!=''): response += "**Description :-**\n {}\n\n".format(doc["description"])
-                if(doc["availability"]!=''): response += "**Availability :-**\n {}\n".format(doc["availability"])
-                if(len(response)>1800):
+                if(doc["bytes"]>1800):
                     response = "**{}** description exceed 2000 chars. 🤷‍ \n Use wiki - http://qb64.org/wiki/{}".format(doc_word, doc_word)
+                else:
+                    response = ">>> **{}** \n {}\n\n".format(doc["title"], doc["use"])
+                    response += "**Syntax :-**\n{}\n\n".format(doc["{{PageSyntax}}"])
+                    if(doc["{{PageParameters}}"]!=''): response += "**Parameters :-**\n {}\n\n".format(doc["{{PageParameters}}"])
+                    if(doc["{{PageDescription}}"]!=''): response += "**Description :-**\n {}\n\n".format(doc["{{PageDescription}}"])
+                    if(doc["{{PageAvailability}}"]!=''): response += "**Availability :-**\n {}\n".format(doc["{{PageAvailability}}"])
             else:
                 await message.add_reaction("❌")
                 response = ">>> {} keyword not found. Try again. 🤷‍ \nUse %bot-help to know about commands".format(message.author.mention)
