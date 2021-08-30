@@ -110,7 +110,18 @@ def getDocumentation(keyword):
             current_topic = fc 
             i += 1
             continue
-
+        
+        if(current_topic == "{{PageSyntax}}"):
+            if(fc[:3]==":: "):
+                fc = "`"+fc[3:]+"`\n"
+            elif(fc[:2]==": "):
+                fc = "`"+fc[2:]+"`\n"
+            elif(fc[:2]=="* "):
+                fc = "\n- "+fc[2:]
+            elif(fc[:3]=="** "):
+                fc = "\n- "+fc[3:]
+            
+        
         if(current_topic in ["{{PageParameters}}", "{{PageDescription}}", "{{PageAvailability}}"]):
             if(fc[:2]=="* "):
                 fc = "\n- "+fc[2:]
@@ -122,7 +133,7 @@ def getDocumentation(keyword):
 
     data["use"] = reformatStr(data["use"], True)
     
-    data["{{PageSyntax}}"] = '`' + reformatStr(data["{{PageSyntax}}"][1:].replace("'''", "").replace("''", "")) + '`'
+    data["{{PageSyntax}}"] = reformatStr(data["{{PageSyntax}}"].replace("'''", "").replace("''", ""))
     data["{{PageParameters}}"] = reformatStr(data["{{PageParameters}}"], True).replace("'''", "").replace("''", "")
     data["{{PageDescription}}"] = reformatStr(data["{{PageDescription}}"], True).replace("'''", "").replace("''", "")
     
