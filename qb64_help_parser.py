@@ -103,19 +103,19 @@ def getDocumentation(keyword):
 
         fc = file_content[i].strip()
 
-        if(fc=="{{PageExamples}}" or fc=="{{PageSeeAlso}}"):
+        if(fc=="{{PageExamples}}" or fc=="{{PageSeeAlso}}" or fc=="{{Template:RelationalTable}}"):
             break
 
         if(fc in topics):
             current_topic = fc 
             i += 1
             continue
-        
+
         if(current_topic == "{{PageSyntax}}"):
-            if(fc[:3]==":: "):
-                fc = "`"+fc[3:]+"`\n"
-            elif(fc[:2]==": "):
+            if(fc[:2]=="::"):
                 fc = "`"+fc[2:]+"`\n"
+            elif(fc[:1]==":"):
+                fc = "`"+fc[1:]+"`\n"
             elif(fc[:2]=="* "):
                 fc = "\n- "+fc[2:]
             elif(fc[:3]=="** "):
