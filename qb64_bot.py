@@ -19,6 +19,8 @@ f = open('keywords.txt', 'r')
 keywords_known = f.read().split('\n')
 f.close()
 
+qb64_command_status = True
+
 @client.event
 async def on_ready():
     print("{} is connected to Discord!".format(client.user))
@@ -28,11 +30,15 @@ async def on_ready():
 
 @client.event
 async def on_message(message):
+    global qb64_command_status
     if message.author == client.user:
         return
 
     # %qb64 command
     if(message.content[:5]=="%qb64"):
+        if(qb64_command_status==False):
+            await message.channel.send("%qb64 is disable due to some maintenance. :(")
+            return
         response = ""
         execute = 0
         debug = False
@@ -127,13 +133,21 @@ async def on_message(message):
         await message.channel.send(response)
         return
     else:
+        if(message.content=="%%disable-%qb64"):
+            qb64_command_status = False
+            await message.reply("%qb64 is now disabled")
+            return
+        if(message.content=="%%enable-%qb64"):
+            qb64_command_status = True
+            await message.reply("%qb64 is now enabled")
+            return
         # %wiki KEYWORD command
         if(message.content[:6]=="%wiki "):
             help_word = message.content[5:].strip().upper()
             response = ""
             if(help_word in keywords_known):
                 await message.add_reaction("✅")
-                response = ">>> {} : http://qb64.org/wiki/".format(message.author.mention)+help_word
+                response = ">>> {} : http://wiki.qb64.org/wiki/".format(message.author.mention)+help_word
             else:
                 await message.add_reaction("❌")
                 response = ">>> {} : keyword not found. Try again. 🤷‍\n Use %bot-help to know about commands".format(message.author.mention)
@@ -147,7 +161,7 @@ async def on_message(message):
                 await message.add_reaction("✅")
                 doc = qb64_help_parser.getDocumentation(doc_word)
                 if(doc["bytes"]>1800):
-                    response = "**{}** description exceed 2000 chars. 🤷‍ \n Use wiki - http://qb64.org/wiki/{}".format(doc_word, doc_word)
+                    response = "**{}** description exceeds 2000 chars. 🤷‍ \n Use wiki - http://wiki.qb64.org/wiki/{}".format(doc_word, doc_word)
                 else:
                     response = ">>> **{}** \n {}\n\n".format(doc["title"], doc["use"])
                     response += "**Syntax :-**\n{}\n\n".format(doc["{{PageSyntax}}"])
@@ -168,7 +182,7 @@ async def on_message(message):
                 await message.add_reaction("✅")
                 response = qb64_help_parser.getExample(doc_word)
                 if(len(response)>1800):
-                    response = ">>> **{}** example code exceed 2000 chars. 🤷‍ \n Use wiki - http://qb64.org/wiki/{}".format(doc_word, doc_word)
+                    response = ">>> **{}** example code exceeds 2000 chars. 🤷‍ \n Use wiki - http://wiki.qb64.org/wiki/{}".format(doc_word, doc_word)
             else:
                 await message.add_reaction("❌")
                 response = ">>> {} : keyword not found. Try again. :(\n Use %bot-help to know about commands".format(message.author.mention)
