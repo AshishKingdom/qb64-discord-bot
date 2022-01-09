@@ -6,7 +6,7 @@ import requests
 def getRawDataFromQB64Wiki(keyword):
     #return the raw wiki data from http://qb64.org/wiki if it succeed
     #otherwise, we will be using data from the stored help files
-    r = requests.get("http://qb64.org/wiki/index.php?action=edit&title="+keyword.upper())
+    r = requests.get("http://wiki.qb64.org/wiki/index.php?action=edit&title="+keyword.upper())
     if(r.status_code==200):
         data = r.text
         return data[data.find('name="wpTextbox1">')+18:data.find("</textarea>")]
